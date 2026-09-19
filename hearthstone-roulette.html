@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tavern Draw</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --wood-dark: #1c130c;
+    --wood-mid: #2b1d12;
+    --wood-panel: #3a2818;
+    --parchment: #ead9b3;
+    --parchment-dim: #cbb98c;
+    --gold: #c9a24a;
+    --gold-bright: #f0cd7a;
+    --ember: #9c2b1f;
+    --ember-bright: #e2542f;
+    --line: rgba(201,162,74,0.35);
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    background: var(--wood-dark);
+    color: var(--parchment);
+    font-family: 'Spectral', serif;
+    min-height: 100vh;
+  }
+
+  body{
+    background:
+      radial-gradient(circle at 15% 10%, rgba(201,162,74,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(156,43,31,0.10), transparent 45%),
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.15) 0px, transparent 2px, transparent 44px, rgba(0,0,0,0.15) 46px),
+      var(--wood-dark);
+    padding: 48px 20px 80px;
+  }
+
+  .frame{
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    text-align:center;
+    margin-bottom: 44px;
+  }
+
+  .kicker{
+    color: var(--parchment-dim);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    font-style: italic;
+    margin: 0 0 6px;
+  }
+
+  h1{
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: clamp(34px, 6vw, 52px);
+    margin: 0;
+    color: var(--gold-bright);
+    text-shadow: 0 2px 0 #000, 0 0 28px rgba(240,205,122,0.25);
+    letter-spacing: 0.01em;
+  }
+
+  h1 span{
+    display:block;
+    font-family: 'Spectral', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 18px;
+    color: var(--parchment-dim);
+    margin-top: 10px;
+    letter-spacing: normal;
+    text-shadow: none;
+  }
+
+  .rule{
+    width: 220px;
+    height: 3px;
+    margin: 22px auto 0;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    position: relative;
+  }
+  .rule::before{
+    content:"◆";
+    position:absolute;
+    left:50%; top:50%;
+    transform: translate(-50%,-50%);
+    color: var(--gold-bright);
+    font-size: 12px;
+    background: var(--wood-dark);
+    padding: 0 8px;
+  }
+
+  /* ---------- Roll button (hero interactive element) ---------- */
+  .roll-wrap{
+    display:flex;
+    justify-content:center;
+    margin: 40px 0 48px;
+  }
+
+  #rollBtn{
+    position: relative;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 4px solid var(--gold);
+    background:
+      radial-gradient(circle at 35% 30%, #5fc9e8, #1d6fa5 55%, #0e3f63 100%);
+    color: #eaf7ff;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    box-shadow:
+      0 0 0 6px rgba(201,162,74,0.15),
+      0 10px 24px rgba(0,0,0,0.55),
+      inset 0 0 24px rgba(255,255,255,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  #rollBtn:hover{
+    transform: translateY(-3px);
+    box-shadow:
+      0 0 0 8px rgba(201,162,74,0.22),
+      0 14px 30px rgba(0,0,0,0.6),
+      inset 0 0 26px rgba(255,255,255,0.3);
+  }
+  #rollBtn:active{ transform: translateY(0px) scale(0.97); }
+  #rollBtn.spinning{ animation: crystalSpin 0.7s ease-in-out; }
+
+  @keyframes crystalSpin{
+    0%{ transform: rotate(0deg) scale(1); }
+    45%{ transform: rotate(320deg) scale(1.08); }
+    100%{ transform: rotate(360deg) scale(1); }
+  }
+
+  /* ---------- Matchup ---------- */
+  .versus{
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 18px;
+    align-items: stretch;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 620px){
+    .versus{ grid-template-columns: 1fr; }
+    .vs-badge{ margin: -6px auto; }
+  }
+
+  .auto-slot{
+    background: linear-gradient(180deg, var(--wood-panel), var(--wood-mid));
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 26px 22px;
+    text-align: center;
+    position: relative;
+    margin-bottom: 20px;
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+    justify-self: center;
+    gap: 10px;
+    width: auto;
+    min-width: 250px;
+  }
+  .auto-slot::before, .auto-slot::after{
+    content:"";
+    position:absolute;
+    width: 14px; height: 14px;
+    border: 2px solid var(--gold);
+    opacity: 0.6;
+  }
+  .auto-slot::before{ top:8px; left:8px; border-right:none; border-bottom:none; }
+  .auto-slot::after{ bottom:8px; right:8px; border-left:none; border-top:none; }
+
+  .slot{
+    background: linear-gradient(180deg, var(--wood-panel), var(--wood-mid));
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 26px 22px;
+    text-align: center;
+    position: relative;
+    min-height: 210px;
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+  }
+  .slot::before, .slot::after{
+    content:"";
+    position:absolute;
+    width: 14px; height: 14px;
+    border: 2px solid var(--gold);
+    opacity: 0.6;
+  }
+  .slot::before{ top:8px; left:8px; border-right:none; border-bottom:none; }
+  .slot::after{ bottom:8px; right:8px; border-left:none; border-top:none; }
+
+  .slot-label{
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    color: var(--parchment-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .player-name{
+    font-family: 'Cinzel', serif;
+    font-size: 23px;
+    color: var(--gold-bright);
+    margin: 2px 0 4px;
+  }
+
+  .deck-badge{
+    display:inline-block;
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-family: 'Spectral', serif;
+    font-weight: 600;
+    font-size: 15px;
+    margin-right: 10px;
+    border: 1px solid rgba(0,0,0,0.25);
+  }
+
+  .deck-class{
+    font-size: 13px;
+    font-style: italic;
+    color: var(--parchment-dim);
+  }
+
+  .empty-state{
+    color: var(--parchment-dim);
+    font-style: italic;
+    font-size: 15px;
+  }
+
+  .vs-badge{
+    align-self: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--ember-bright), var(--ember) 70%);
+    border: 3px solid var(--gold);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff0e0;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+  }
+
+  /* ---------- Roster panels ---------- */
+  .rosters{
+    gap: 22px;
+    margin-bottom: 25px;
+  }
+  @media (max-width: 620px){
+    .rosters{ grid-template-columns: 1fr; }
+  }
+
+  .panel{
+    background: var(--wood-mid);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .panel-head{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--line);
+    user-select: none;
+  }
+
+  .panel-head h2{
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    margin: 0;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+  }
+
+  .panel-head .count{
+    font-size: 12px;
+    color: var(--parchment-dim);
+  }
+
+  .chevron{
+    color: var(--gold);
+    transition: transform 0.2s ease;
+    font-size: 12px;
+  }
+  .panel.collapsed .chevron{ transform: rotate(-90deg); }
+
+  .panel-body{
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel.collapsed .panel-body{ display:none; }
+
+  .roster-row{
+    gap: 10px;
+    font-size: 14px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+  }
+  .roster-row:hover{ background: rgba(201,162,74,0.08); }
+
+  .deck-disabled{
+    background: rgba(75, 75, 75, 0.75)!important;
+    color: rgba(115, 115, 115, 1) !important;
+    text-decoration-line: line-through
+  }
+
+  .deck-disabled > * {
+    color: rgba(115, 115, 115, 1) !important;
+  }
+
+  .swatch{
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  .roster-row-deck{
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
+    color: var(--parchment);
+    font-family: 'Spectral', serif;
+    font-size: 14px;
+    padding: 2px 0;
+    width: 100%;
+    display: flex;
+  }
+
+  .roster-row .remove{
+    background:none;
+    border:none;
+    color: var(--parchment-dim);
+    cursor:pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    line-height: 1;
+  }
+  .roster-row .remove:hover{ color: var(--ember-bright); }
+
+  .add-row{
+    display:flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .add-row input{
+    flex: 1;
+    background: var(--wood-dark);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--parchment);
+    font-family: 'Spectral', serif;
+    font-size: 13px;
+    padding: 7px 10px;
+  }
+  .add-row select{
+    background: var(--wood-dark);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--parchment);
+    font-family: 'Spectral', serif;
+    font-size: 13px;
+    padding: 7px 8px;
+  }
+  .add-row button{
+    background: var(--gold);
+    border: none;
+    border-radius: 5px;
+    color: #241708;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 7px 14px;
+    cursor: pointer;
+  }
+  .add-row button:hover{ background: var(--gold-bright); }
+
+  th {
+    border: 1px solid var(--line);
+  }
+
+  /* Tooltip container */
+.tooltip {
+  position: relative;
+  /*display: inline-block;*/
+  border-bottom: 1px dotted black; /* Add dots under the hoverable text */
+  cursor: pointer;
+}
+
+/* Tooltip text */
+.tooltiptext {
+  visibility: hidden; /* Hidden by default */
+  width: 130px;
+  background-color: black;
+  color: #ffffff;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+  position: absolute;
+  z-index: 1; /* Ensure tooltip is displayed above content */
+}
+
+/* Show the tooltip text on hover */
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
+  footer{
+    text-align:center;
+    margin-top: 40px;
+    font-size: 12px;
+    color: var(--parchment-dim);
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <header>
+    <div>
+      <button onclick="document.getElementById('importData').click()">Import</button>
+      <input type="file" id="importData" accept="application/json,.json" hidden>
+      <button onclick="exportData()">Export</button>
+    </div>
+    <p class="kicker">The Innkeeper shuffles the deckbox&hellip;</p>
+    <h1>TAVERN DRAW
+      <span>Roll two players. Roll two decks. Let the match begin.</span>
+    </h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="roll-wrap">
+    <button id="rollBtn" onclick="roll()">Roll the Draw</button>
+  </div>
+
+  <div class="versus">
+    <div class="slot" id="slotA" onclick="winA()">
+      <div class="slot-label">CHALLENGER</div>
+      <div class="empty-state">Awaiting the draw&hellip;</div>
+    </div>
+
+    <div class="vs-badge">VS</div>
+
+    <div class="slot" id="slotB" onclick="winB()">
+      <div class="slot-label">CHALLENGER</div>
+      <div class="empty-state">Awaiting the draw&hellip;</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="auto-slot">
+      <span>Auto-Slot:</span>
+      <span id="auto-slot">-</span>
+    </div>
+  </div>
+
+  <div class="rosters">
+    <div class="panel" id="deckPanel">
+      <div class="panel-head">
+        <h2>Deckbox</h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="count" id="deckCount">0 decks</span>
+          <!--span class="chevron">&#9660;</span-->
+        </div>
+      </div>
+      <div class="panel-body">
+        <table id="deckList" style="border-spacing:0 2px;"></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="rosters">
+    <div class="panel" id="matchHistoryPanel">
+      <div class="panel-head">
+        <h2>Match-History</h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="count" id="gameCount">0 Matches</span>
+          <!--span class="chevron">&#9660;</span-->
+        </div>
+      </div>
+      <div class="panel-body">
+        <table id="matchHistoryTable" style="border-spacing:0 2px;"></table>
+      </div>
+    </div>
+  </div>
+
+  <!--footer>Edit the deckbox and roster above, then roll again.</footer-->
+
+</div>
+
+<script>
+  document.getElementById('importData').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();          // read the file as a string
+    const data = JSON.parse(text);           // throws if it isn't valid JSON
+
+    // Minimal validation: adjust to your data's shape
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+      throw new Error('Unexpected file format');
+    }
+
+    if (!confirm('This will replace your current data. Continue?')) return;
+
+    // data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
+    decks = data.decks;
+    matchHistory = data.matchHistory;
+    auto_slot = data.auto_slot;
+
+    save(data);
+    render();                                // re-draw your UI from the new state
+  } catch (err) {
+    alert('Import failed: ' + err.message);
+  } finally {
+    e.target.value = '';                     // reset so picking the same file again still fires "change"
+  }
+});
+
+  const CLASS_COLORS = {
+    "Mage":        { bg: "#2f7fb8", fg: "#eaf6ff" },
+    "Warrior":     { bg: "#8a5a2e", fg: "#fbeedc" },
+    "Hunter":      { bg: "#4f7942", fg: "#eefbe6" },
+    "Priest":      { bg: "#d8d3c4", fg: "#2a2620" },
+    "Rogue":       { bg: "#3a3a3a", fg: "#f0d24a" },
+    "Shaman":      { bg: "#3c5f9e", fg: "#e8eeff" },
+    "Paladin":     { bg: "#c79a2b", fg: "#2a1e04" },
+    "Warlock":     { bg: "#6a3c8c", fg: "#f2e6ff" },
+    "Druid":       { bg: "#b5651d", fg: "#fff1e0" },
+    "Demon Hunter":{ bg: "#2e8b57", fg: "#eafff2" },
+    "Death Knight":{ bg: "#4aa3ad", fg: "#e6ffff" }
+  };
+
+  const PLAYER_COLORS = {
+    "Gino":   { bg: "#2f7fb8", fg: "#eaf6ff" },
+    "Tim":    { bg: "#2f7fb8", fg: "#eaf6ff" },
+    "Niklas": { bg: "#2f7fb8", fg: "#eaf6ff" }
+  };
+
+  const DECKLIST_TEMP = 
+  `Gino;Absolut Cinema;Mage;0
+Tim;asgard;Warrior;0
+Niklas;Wingman;Warlock;1
+Gino;Test;Mage;2
+Tim;Test2;Rogue;0
+Niklas;Test3;Druid;1
+Gino;Test Cinema;Mage;0
+Tim;Test asgard;Shaman;0
+Niklas;TestWingman;Warlock;1`;
+
+  let decks = [
+    { name: "Big Spell Mage",        cls: "Mage",         owner: "Gino",    strikes: 0 },
+    { name: "Pirate Aggro",          cls: "Warrior",      owner: "Niklas",  strikes: 2 },
+    { name: "Face Hunter",           cls: "Hunter",       owner: "Tim",     strikes: 0 },
+    { name: "Resurrect Priest",      cls: "Priest",       owner: "Gino",    strikes: 1 },
+    { name: "Tempo Rogue",           cls: "Rogue",        owner: "Tim",     strikes: 0 },
+    { name: "Totem Shaman",          cls: "Shaman",       owner: "Niklas",  strikes: 0 },
+    { name: "Handbuff Paladin",      cls: "Paladin",      owner: "Gino",    strikes: 2 },
+    { name: "Zoo Warlock",           cls: "Warlock",      owner: "Tim",     strikes: 0 },
+    { name: "Ramp Druid",            cls: "Druid",        owner: "Niklas",  strikes: 1 },
+    { name: "Aggro Demon Hunter",    cls: "Demon Hunter", owner: "Gino",    strikes: 0 },
+    { name: "Frost Death Knight",    cls: "Death Knight", owner: "Tim",     strikes: 0 }
+  ];
+
+  let matchHistory = [];
+
+  const PLAYERS = [
+    "Gino", "Tim", "Niklas"
+  ];
+
+  let slotA = {};
+  let slotB = {};
+
+  let auto_slot = { name: "Tim", count: 3 };
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem("HS")) ?? {}; }
+    catch { return {}; }
+  }
+
+  function save(data) {
+    try { localStorage.setItem("HS", JSON.stringify(data)); }
+    catch (e) { console.warn('Save failed', e); }
+  }
+
+  function exportData() {
+    const state = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
+    const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'backup.json';
+    a.click();
+  }
+
+  function uid(){ return Math.random().toString(36).slice(2, 9); }
+
+  function readDecklist() {
+    fetch("./decklist.txt")
+      .then((res) => res.text())
+      .then((text) => {
+        console.log(text);
+      })
+      .catch((e) => console.error(e));
+  }
+
+  function addStrikeToDeck(deckname) {
+    decks.forEach((item, index, arr) => {
+      if (item.name == deckname) {
+        arr[index].strikes += 1;
+      }
+    });
+  }
+
+  function readDecklistTemp() {
+    decks = [];
+    DECKLIST_TEMP.split("\n").forEach(s => {
+      split_string = s.split(";");
+      owner = split_string[0];
+      deckname = split_string[1];
+      class_name = split_string[2];
+      strikes = split_string[3];
+
+      decks.push({ name: deckname, cls: class_name, owner: owner, strikes: strikes });
+    })
+  }
+
+  function renderDecks(){
+    const list = document.getElementById('deckList');
+    list.innerHTML = decks.map((d, i) => {
+      const c = CLASS_COLORS[d.cls] || { bg:"#555", fg:"#fff" };
+
+      return `
+        <tr class="roster-row ${d.strikes >= 2 ? "deck-disabled" : ""}">
+          <td><span class="swatch" style="display: block; background:${c.bg};"></span></td>
+          <td class="roster-row-deck">${d.name}</td>
+          <td>${d.owner}</td>
+          <td style="font-size:12px; color:var(--parchment-dim); white-space:nowrap;">${d.cls}</td>
+          <td style="color: red; min-width: 7px">${d.strikes == 1 ? "&times;": ""}</td>
+        </tr>`;
+    }).join('');
+    document.getElementById('deckCount').textContent = decks.length + (decks.length === 1 ? ' deck' : ' decks');
+  }
+
+  function renderMatchHistory() {
+    const history = document.getElementById('matchHistoryTable');
+    //history.innerHTML = matchHistory.map((d, i) => {
+    let res = matchHistory.map((d, i) => {
+      const cWinner = CLASS_COLORS[d.winner.deck.cls] || { bg:"#555", fg:"#fff" };
+      const cLooser = CLASS_COLORS[d.looser.deck.cls] || { bg:"#555", fg:"#fff" };
+
+      return `
+        <tr class="roster-row">
+          <td>${i + 1}.</td>
+          <td class="tooltip">
+            <span class="swatch" style="display: block; background:${cWinner.bg};"></span>
+            <span class="tooltiptext">${d.winner.deck.cls}</span>
+          </td>
+          <td class="roster-row-deck">${d.winner.deck.name}</td>
+          <td>${d.winner.player}</td>
+          <td>vs.</td>
+          <td class="tooltip">
+            <span class="swatch" style="display: block; background:${cLooser.bg};"></span>
+            <span class="tooltiptext">${d.looser.deck.cls}</span>
+          </td>
+          <td class="roster-row-deck">${d.looser.deck.name}</td>
+          <td>${d.looser.player}</td>
+        </tr>`;
+    });
+    res.splice(0, 0, "<tr><th></th><th colspan=\"3\">Winner</th><th></th><th colspan=\"3\">Looser</th></tr><tr><th>Match</th><th>Class</th><th>Deck</th><th>Player</th><th></th><th>Class</th><th>Deck</th><th>Player</th></tr>");
+    history.innerHTML = res.join("");
+    document.getElementById('gameCount').textContent = matchHistory.length + (matchHistory.length === 1 ? ' Match' : ' Matches');
+  }
+
+  function renderPlayers(){
+    const list = document.getElementById('playerList');
+    list.innerHTML = PLAYERS.map((p, i) => `
+      <div class="roster-row">
+        <span class="swatch" style="background:var(--gold);"></span>
+        <span>${p}</span>
+      </div>`).join('');
+    document.getElementById('playerCount').textContent = PLAYERS.length + (PLAYERS.length === 1 ? ' player' : ' players');
+  }
+
+  function pickTwoDecksFromGivenPlayers(p1, p2) {
+    const combined_decklist = decks.filter((x) => {
+      
+      if (x.strikes < 2 && (x.owner == p1 || x.owner == p2)) {
+        
+        return x;
+      }
+    });
+
+    console.log(p1, p2, combined_decklist);
+
+    return pickTwoDistinct(combined_decklist);
+  }
+
+  function pickTwoDistinct(arr) {
+    if (arr.length < 2) return null;
+
+    let i = Math.floor(Math.random() * arr.length);
+    let j = Math.floor(Math.random() * (arr.length - 1));
+    if (j == i) j++;
+    return [arr[i], arr[j]];
+  }
+
+  function pickTwoPlayersAndGetRemaining() {
+    let indices = [0, 1, 2];
+    const p1_index = Math.floor(Math.random()*indices.length);
+    indices.splice(p1_index, 1);
+
+    let p2_index = Math.floor(Math.random()*indices.length);
+    
+    const p1 = PLAYERS[p1_index];
+    const p2 = PLAYERS[indices[p2_index]];
+    const not_playing = PLAYERS[indices[1 - p2_index]]; // Reverse binary index to get the other player
+
+    return [p1, p2, not_playing];
+  }
+
+  function renderSlot(slotId, player, deck){
+    const c = CLASS_COLORS[deck.cls] || { bg:"#555", fg:"#fff" };
+    document.getElementById(slotId).innerHTML = `
+      <div class="slot-label">CHALLENGER</div>
+      <div class="player-name">${player}</div>
+      <div style="display: flex; justify-content: center; align-items: center;">
+        <span class="deck-badge" style="background:${c.bg}; color:${c.fg};">${deck.name} | ${deck.owner}</span>
+        <span style="color: red; font-size: xx-large;">${deck.strikes == 1 ? "&times;": ""}</span>
+      </div>
+      <div class="deck-class">${deck.cls}</div>
+    `;
+  }
+
+  function renderSlotEmpty() {
+    slotA = {};
+    slotB = {};
+    document.getElementById("slotA").innerHTML = `
+      <div class="slot-label">CHALLENGER</div>
+      <div class="empty-state">Awaiting the draw&hellip;</div>
+    `;
+
+    document.getElementById("slotB").innerHTML = `
+      <div class="slot-label">CHALLENGER</div>
+      <div class="empty-state">Awaiting the draw&hellip;</div>
+    `;
+  }
+
+  function renderAutoSlot() {
+    document.getElementById("auto-slot").innerHTML = `${auto_slot.name}:</br>Hasn't played for ${auto_slot.count} Game(s)!${auto_slot.count >= 3 ? "</br>Will be autoslotted next spin.": ""}`;
+  }
+
+  function increase_auto_slot(player) {
+    if (auto_slot.name == player) {
+      auto_slot.count++;
+    } else {
+      auto_slot.name = player;
+      auto_slot.count = 1;
+    }
+
+    renderAutoSlot();
+  }
+
+  function winA() {
+    if (slotA.player && slotB.player) {
+      win(slotA, slotB);
+    }
+  }
+
+  function winB() {
+    if (slotA.player && slotB.player) {
+      win(slotB, slotA);
+    }
+  }
+
+  function win(winner, looser) {
+    if (window.confirm(`Winner: ${winner.player} on Deck "${winner.deck.name}"`)) {
+      matchHistory.push({winner: winner, looser: looser});
+      addStrikeToDeck(looser.deck.name);
+      renderDecks();
+      renderMatchHistory();
+      renderSlotEmpty();
+    }
+  }
+
+  function roll(){
+    if (decks.length < 2){
+      alert("Add at least two decks to the deckbox first.");
+      return;
+    }
+
+    if (slotA.player && slotB.player) {
+      console.log(!slotA.player, !slotB.player);
+      if (!window.confirm("Do you want to re-roll?")) { return; }
+    }
+
+    const btn = document.getElementById('rollBtn');
+    btn.classList.remove('spinning');
+    void btn.offsetWidth;
+    btn.classList.add('spinning');
+
+    let p1, p2, not_playing;
+
+    if (auto_slot.count >= 3) {
+      p1 = auto_slot.name;
+      const list_of_remaining_players = PLAYERS.filter(x => { if (x != p1) { return x; }});
+      const index_p2 = Math.floor(Math.random() * list_of_remaining_players.length); // 2 Elements left in array, so either index [0, 1]
+      
+      p2 = list_of_remaining_players[index_p2];
+      not_playing = list_of_remaining_players[1 - index_p2]; // Reverse binary index to get the other player
+      
+    } else {
+      [p1, p2, not_playing] = pickTwoPlayersAndGetRemaining();
+    }
+
+    const [d1, d2] = pickTwoDecksFromGivenPlayers(p1, p2);
+
+    increase_auto_slot(not_playing);
+
+    renderSlot('slotA', p1, d1);
+    slotA = { player: p1, deck: d1};
+    renderSlot('slotB', p2, d2);
+    slotB = { player: p2, deck: d2};
+  }
+
+  readDecklistTemp();
+  renderDecks();
+
+  function render() {
+    renderDecks();
+    renderSlotEmpty();
+    renderMatchHistory();
+    renderAutoSlot();
+  }
+</script>
+
+</body>
+</html>
