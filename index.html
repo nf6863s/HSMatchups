@@ -336,6 +336,7 @@
     width: 10px; height: 10px;
     border-radius: 50%;
     flex: 0 0 auto;
+    margin: auto;
   }
 
   .roster-row-deck{
@@ -400,6 +401,10 @@
 
   th {
     border: 1px solid var(--line);
+  }
+
+  #matchHistoryTable td {
+    text-align: center;
   }
 
   /* Tooltip container */
@@ -534,7 +539,7 @@
     matchHistory = data.matchHistory;
     auto_slot = data.auto_slot;
 
-    save(data);
+    save();
     render();                                // re-draw your UI from the new state
   } catch (err) {
     alert('Import failed: ' + err.message);
@@ -604,7 +609,8 @@ Niklas;TestWingman;Warlock;1`;
     catch { return {}; }
   }
 
-  function save(data) {
+  function save() {
+    const data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
     try { localStorage.setItem("HS", JSON.stringify(data)); }
     catch (e) { console.warn('Save failed', e); }
   }
@@ -688,10 +694,11 @@ Niklas;TestWingman;Warlock;1`;
             <span class="swatch" style="display: block; background:${cLooser.bg};"></span>
             <span class="tooltiptext">${d.looser.deck.cls}</span>
           </td>
-          <td class="roster-row-deck">${d.looser.deck.name}</td>
+          <td class="roster-row-deck ${d.kicked_out ? "deck-disabled" : ""}"">${d.looser.deck.name}</td>
           <td>${d.looser.player}</td>
         </tr>`;
     });
+    res.reverse();
     res.splice(0, 0, "<tr><th></th><th colspan=\"3\">Winner</th><th></th><th colspan=\"3\">Looser</th></tr><tr><th>Match</th><th>Class</th><th>Deck</th><th>Player</th><th></th><th>Class</th><th>Deck</th><th>Player</th></tr>");
     history.innerHTML = res.join("");
     document.getElementById('gameCount').textContent = matchHistory.length + (matchHistory.length === 1 ? ' Match' : ' Matches');
@@ -800,11 +807,12 @@ Niklas;TestWingman;Warlock;1`;
 
   function win(winner, looser) {
     if (window.confirm(`Winner: ${winner.player} on Deck "${winner.deck.name}"`)) {
-      matchHistory.push({winner: winner, looser: looser});
       addStrikeToDeck(looser.deck.name);
+      matchHistory.push({winner: winner, looser: looser, kicked_out: looser.deck.strikes >= 2 });
       renderDecks();
       renderMatchHistory();
       renderSlotEmpty();
+      save();
     }
   }
 
