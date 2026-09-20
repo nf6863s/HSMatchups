@@ -448,9 +448,9 @@
 
   <header>
     <div>
-      <button onclick="loadFirebaseDB()">Load</button>
-      <!--input type="file" id="importData" accept="application/json,.json" hidden-->
-      <button onclick="saveFirebaseDB()">Save</button>
+      <!--button onclick="loadFirebaseDB()">Load</button>
+      <input type="file" id="importData" accept="application/json,.json" hidden>
+      <button onclick="saveFirebaseDB()">Save</button-->
     </div>
     <p class="kicker">The Innkeeper shuffles the deckbox&hellip;</p>
     <h1>TAVERN DRAW
@@ -662,6 +662,7 @@ Niklas;TestWingman;Warlock;1`;
     const data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
     try { localStorage.setItem("HS", JSON.stringify(data)); }
     catch (e) { console.warn('Save failed', e); }
+    saveFirebaseDB();
   }
 
   async function saveFirebaseDB() {
