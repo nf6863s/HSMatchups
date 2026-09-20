@@ -448,9 +448,9 @@
 
   <header>
     <div>
-      <button onclick="document.getElementById('importData').click()">Import</button>
-      <input type="file" id="importData" accept="application/json,.json" hidden>
-      <button onclick="exportData()">Export</button>
+      <button onclick="loadFirebaseDB()">Load</button>
+      <!--input type="file" id="importData" accept="application/json,.json" hidden-->
+      <button onclick="saveFirebaseDB()">Save</button>
     </div>
     <p class="kicker">The Innkeeper shuffles the deckbox&hellip;</p>
     <h1>TAVERN DRAW
@@ -519,34 +519,54 @@
 </div>
 
 <script>
-  document.getElementById('importData').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  /* document.getElementById('importData').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  try {
-    const text = await file.text();          // read the file as a string
-    const data = JSON.parse(text);           // throws if it isn't valid JSON
+    try {
+      const text = await file.text();          // read the file as a string
+      const data = JSON.parse(text);           // throws if it isn't valid JSON
 
-    // Minimal validation: adjust to your data's shape
-    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-      throw new Error('Unexpected file format');
+      // Minimal validation: adjust to your data's shape
+      if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+        throw new Error('Unexpected file format');
+      }
+
+      if (!confirm('This will replace your current data. Continue?')) return;
+
+      // data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
+      decks = data.decks;
+      matchHistory = data.matchHistory;
+      auto_slot = data.auto_slot;
+
+      save();
+      render();                                // re-draw your UI from the new state
+    } catch (err) {
+      alert('Import failed: ' + err.message);
+    } finally {
+      e.target.value = '';                     // reset so picking the same file again still fires "change"
+    }
+  }); */
+
+  const DB = 'https://hs-matchup-default-rtdb.europe-west1.firebasedatabase.app/';
+
+  const es = new EventSource(DB);
+
+  es.addEventListener('put', e => {
+    const { path, data } = JSON.parse(e.data);
+
+    if (data != {}) {
+      decks = data.decks;
+      matchHistory = data.matchHistory;
+      auto_slot = data.auto_slot;
+    } else {
+      decks = [];
+      matchHistory = [];
+      auto_slot = {};
     }
 
-    if (!confirm('This will replace your current data. Continue?')) return;
-
-    // data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
-    decks = data.decks;
-    matchHistory = data.matchHistory;
-    auto_slot = data.auto_slot;
-
-    save();
-    render();                                // re-draw your UI from the new state
-  } catch (err) {
-    alert('Import failed: ' + err.message);
-  } finally {
-    e.target.value = '';                     // reset so picking the same file again still fires "change"
-  }
-});
+    render();
+  });
 
   const CLASS_COLORS = {
     "Mage":        { bg: "#2f7fb8", fg: "#eaf6ff" },
@@ -609,10 +629,31 @@ Niklas;TestWingman;Warlock;1`;
     catch { return {}; }
   }
 
+  async function loadFirebaseDB() {
+    try {
+    const res = await fetch(DB);
+    if (!res.ok) throw new Error(res.status);
+    const data = (await res.json()) ?? {};      // null when nothing is stored yet
+    if (data != {}) {
+      decks = data.decks;
+      matchHistory = data.matchHistory;
+      auto_slot = data.auto_slot;
+    }
+  } catch (e) { console.warn('Load failed', e); return {}; }
+  }
+
   function save() {
     const data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
     try { localStorage.setItem("HS", JSON.stringify(data)); }
     catch (e) { console.warn('Save failed', e); }
+  }
+
+  async function saveFirebaseDB() {
+    const data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
+    try {
+      const res = await fetch(DB, { method: 'PUT', body: JSON.stringify(data) });
+      if (!res.ok) throw new Error(res.status);
+    } catch (e) { console.warn('Save failed', e); }
   }
 
   function exportData() {
