@@ -459,19 +459,19 @@
     <div class="rule"></div>
   </header>
 
-  <div class="roll-wrap">
+  <!--div class="roll-wrap">
     <button id="rollBtn" onclick="roll()">Roll the Draw</button>
-  </div>
+  </div-->
 
   <div class="versus">
-    <div class="slot" id="slotA" onclick="winA()">
+    <div class="slot" id="slotA"><!--onclick="winA()"-->
       <div class="slot-label">CHALLENGER</div>
       <div class="empty-state">Awaiting the draw&hellip;</div>
     </div>
 
     <div class="vs-badge">VS</div>
 
-    <div class="slot" id="slotB" onclick="winB()">
+    <div class="slot" id="slotB"><!---- onclick="winB()"-->
       <div class="slot-label">CHALLENGER</div>
       <div class="empty-state">Awaiting the draw&hellip;</div>
     </div>
@@ -949,7 +949,6 @@ Niklas;TestWingman;Warlock;1`;
 
   function render() {
     renderDecks();
-    renderSlotEmpty();
     renderMatchHistory();
     renderAutoSlot();
   }
