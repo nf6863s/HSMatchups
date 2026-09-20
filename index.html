@@ -548,17 +548,38 @@
     }
   }); */
 
-  const DB = 'https://hs-matchup-default-rtdb.europe-west1.firebasedatabase.app/data.json';
+  const DB_DATA = 'https://hs-matchup-default-rtdb.europe-west1.firebasedatabase.app/data.json';
+  const DB_MATCHUP = 'https://hs-matchup-default-rtdb.europe-west1.firebasedatabase.app/matchup.json';
 
-  const es = new EventSource(DB);
+  const es_data = new EventSource(DB_DATA);
+  const es_matchup = new EventSource(DB_MATCHUP);
 
-  es.addEventListener('put', e => {
+  let slotA = {};
+  let slotB = {};
+  let auto_slot = { name: "Tim", count: 3 };
+  /* let decks = [
+    { name: "Big Spell Mage",        cls: "Mage",         owner: "Gino",    strikes: 0 },
+    { name: "Pirate Aggro",          cls: "Warrior",      owner: "Niklas",  strikes: 2 },
+    { name: "Face Hunter",           cls: "Hunter",       owner: "Tim",     strikes: 0 },
+    { name: "Resurrect Priest",      cls: "Priest",       owner: "Gino",    strikes: 1 },
+    { name: "Tempo Rogue",           cls: "Rogue",        owner: "Tim",     strikes: 0 },
+    { name: "Totem Shaman",          cls: "Shaman",       owner: "Niklas",  strikes: 0 },
+    { name: "Handbuff Paladin",      cls: "Paladin",      owner: "Gino",    strikes: 2 },
+    { name: "Zoo Warlock",           cls: "Warlock",      owner: "Tim",     strikes: 0 },
+    { name: "Ramp Druid",            cls: "Druid",        owner: "Niklas",  strikes: 1 },
+    { name: "Aggro Demon Hunter",    cls: "Demon Hunter", owner: "Gino",    strikes: 0 },
+    { name: "Frost Death Knight",    cls: "Death Knight", owner: "Tim",     strikes: 0 }
+  ]; */
+  let decks = [];
+  let matchHistory = [];
+
+  es_data.addEventListener('put', e => {
     const { path, data } = JSON.parse(e.data);
-    console.log("loading data from db");
+    
     if (data != {}) {
       decks = data.decks;
       matchHistory = data.matchHistory ?? [];
-      auto_slot = data.auto_slot ?? {name: "", count: 0};
+      //auto_slot = data.auto_slot ?? {name: "", count: 0};
       console.log("data found and loaded");
     } else {
       decks = [];
@@ -568,6 +589,23 @@
     }
 
     render();
+  });
+
+  es_matchup.addEventListener('put', e => {
+    const { path, data } = JSON.parse(e.data);
+    
+    slotA = data.slotA ?? {};
+    slotB = data.slotB ?? {};
+    auto_slot = data.auto_slot ?? {name: "", count: 0};
+
+    if (data.slotA && data.slotB) {
+      renderSlot('slotA', slotA.player, slotA.deck);
+      renderSlot('slotB', slotB.player, slotB.deck);
+    } else {
+      renderSlotEmpty();
+    }
+    
+    renderAutoSlot();
   });
 
   const CLASS_COLORS = {
@@ -601,30 +639,9 @@ Gino;Test Cinema;Mage;0
 Tim;Test asgard;Shaman;0
 Niklas;TestWingman;Warlock;1`;
 
-  let decks = [
-    { name: "Big Spell Mage",        cls: "Mage",         owner: "Gino",    strikes: 0 },
-    { name: "Pirate Aggro",          cls: "Warrior",      owner: "Niklas",  strikes: 2 },
-    { name: "Face Hunter",           cls: "Hunter",       owner: "Tim",     strikes: 0 },
-    { name: "Resurrect Priest",      cls: "Priest",       owner: "Gino",    strikes: 1 },
-    { name: "Tempo Rogue",           cls: "Rogue",        owner: "Tim",     strikes: 0 },
-    { name: "Totem Shaman",          cls: "Shaman",       owner: "Niklas",  strikes: 0 },
-    { name: "Handbuff Paladin",      cls: "Paladin",      owner: "Gino",    strikes: 2 },
-    { name: "Zoo Warlock",           cls: "Warlock",      owner: "Tim",     strikes: 0 },
-    { name: "Ramp Druid",            cls: "Druid",        owner: "Niklas",  strikes: 1 },
-    { name: "Aggro Demon Hunter",    cls: "Demon Hunter", owner: "Gino",    strikes: 0 },
-    { name: "Frost Death Knight",    cls: "Death Knight", owner: "Tim",     strikes: 0 }
-  ];
-
-  let matchHistory = [];
-
   const PLAYERS = [
     "Gino", "Tim", "Niklas"
   ];
-
-  let slotA = {};
-  let slotB = {};
-
-  let auto_slot = { name: "Tim", count: 3 };
 
   function load() {
     try { return JSON.parse(localStorage.getItem("HS")) ?? {}; }
@@ -654,11 +671,12 @@ Niklas;TestWingman;Warlock;1`;
     { name: "Aggro Demon Hunter",    cls: "Demon Hunter", owner: "Gino",    strikes: 0 },
     { name: "Frost Death Knight",    cls: "Death Knight", owner: "Tim",     strikes: 0 }], matchHistory: [], auto_slot: {name: "", count: 0} };
      try {
-      const res = await fetch(DB, {method: 'PUT', body: JSON.stringify(data)});
+      const res = await fetch(DB_DATA, {method: 'PUT', body: JSON.stringify(data)});
      } catch (e) { console.warn('Upload failed', e); }
   }
 
   function save() {
+    // const data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
     const data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
     try { localStorage.setItem("HS", JSON.stringify(data)); }
     catch (e) { console.warn('Save failed', e); }
@@ -666,11 +684,20 @@ Niklas;TestWingman;Warlock;1`;
   }
 
   async function saveFirebaseDB() {
-    const data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
+    // const data = { decks: decks, matchHistory: matchHistory, auto_slot: auto_slot };
+    const data = { decks: decks, matchHistory: matchHistory };
     try {
-      const res = await fetch(DB, { method: 'PUT', body: JSON.stringify(data) });
+      const res = await fetch(DB_DATA, { method: 'PUT', body: JSON.stringify(data) });
       if (!res.ok) throw new Error(res.status);
     } catch (e) { console.warn('Save failed', e); }
+  }
+
+  async function saveMatchupFirebaseDB() {
+    const data = { slotA: slotA, slotB: slotB, auto_slot: auto_slot };
+    try {
+      const res = await fetch(DB_MATCHUP, { method: 'PUT', body: JSON.stringify(data) });
+      if (!res.ok) throw new Error(res.status);
+    } catch (e) { console.warn('Save Matchup failed', e); }
   }
 
   function exportData() {
@@ -914,6 +941,7 @@ Niklas;TestWingman;Warlock;1`;
     slotA = { player: p1, deck: d1};
     renderSlot('slotB', p2, d2);
     slotB = { player: p2, deck: d2};
+    saveMatchupFirebaseDB();
   }
 
   //readDecklistTemp();
