@@ -548,21 +548,23 @@
     }
   }); */
 
-  const DB = 'https://hs-matchup-default-rtdb.europe-west1.firebasedatabase.app/';
+  const DB = 'https://hs-matchup-default-rtdb.europe-west1.firebasedatabase.app/data.json';
 
   const es = new EventSource(DB);
 
   es.addEventListener('put', e => {
     const { path, data } = JSON.parse(e.data);
-
+    console.log("loading data from db");
     if (data != {}) {
       decks = data.decks;
-      matchHistory = data.matchHistory;
-      auto_slot = data.auto_slot;
+      matchHistory = data.matchHistory ?? [];
+      auto_slot = data.auto_slot ?? {name: "", count: 0};
+      console.log("data found and loaded");
     } else {
       decks = [];
       matchHistory = [];
       auto_slot = {};
+      console.log("no data in db");
     }
 
     render();
@@ -630,16 +632,30 @@ Niklas;TestWingman;Warlock;1`;
   }
 
   async function loadFirebaseDB() {
-    try {
-    const res = await fetch(DB);
-    if (!res.ok) throw new Error(res.status);
-    const data = (await res.json()) ?? {};      // null when nothing is stored yet
-    if (data != {}) {
-      decks = data.decks;
-      matchHistory = data.matchHistory;
-      auto_slot = data.auto_slot;
+    /* try {
+      const res = await fetch(DB);
+      if (!res.ok) throw new Error(res.status);
+      const data = (await res.json()) ?? {};      // null when nothing is stored yet
+      if (data != {}) {
+        decks = data.decks;
+        matchHistory = data.matchHistory;
+        auto_slot = data.auto_slot;
     }
-  } catch (e) { console.warn('Load failed', e); return {}; }
+    } catch (e) { console.warn('Load failed', e); return {}; } */
+     const data = { decks: [{ name: "Big Spell Mage",        cls: "Mage",         owner: "Gino",    strikes: 0 },
+    { name: "Pirate Aggro",          cls: "Warrior",      owner: "Niklas",  strikes: 2 },
+    { name: "Face Hunter",           cls: "Hunter",       owner: "Tim",     strikes: 0 },
+    { name: "Resurrect Priest",      cls: "Priest",       owner: "Gino",    strikes: 1 },
+    { name: "Tempo Rogue",           cls: "Rogue",        owner: "Tim",     strikes: 0 },
+    { name: "Totem Shaman",          cls: "Shaman",       owner: "Niklas",  strikes: 0 },
+    { name: "Handbuff Paladin",      cls: "Paladin",      owner: "Gino",    strikes: 2 },
+    { name: "Zoo Warlock",           cls: "Warlock",      owner: "Tim",     strikes: 0 },
+    { name: "Ramp Druid",            cls: "Druid",        owner: "Niklas",  strikes: 1 },
+    { name: "Aggro Demon Hunter",    cls: "Demon Hunter", owner: "Gino",    strikes: 0 },
+    { name: "Frost Death Knight",    cls: "Death Knight", owner: "Tim",     strikes: 0 }], matchHistory: [], auto_slot: {name: "", count: 0} };
+     try {
+      const res = await fetch(DB, {method: 'PUT', body: JSON.stringify(data)});
+     } catch (e) { console.warn('Upload failed', e); }
   }
 
   function save() {
@@ -717,6 +733,7 @@ Niklas;TestWingman;Warlock;1`;
   function renderMatchHistory() {
     const history = document.getElementById('matchHistoryTable');
     //history.innerHTML = matchHistory.map((d, i) => {
+    if (!matchHistory || matchHistory.length == 0) { return; } 
     let res = matchHistory.map((d, i) => {
       const cWinner = CLASS_COLORS[d.winner.deck.cls] || { bg:"#555", fg:"#fff" };
       const cLooser = CLASS_COLORS[d.looser.deck.cls] || { bg:"#555", fg:"#fff" };
@@ -849,6 +866,7 @@ Niklas;TestWingman;Warlock;1`;
   function win(winner, looser) {
     if (window.confirm(`Winner: ${winner.player} on Deck "${winner.deck.name}"`)) {
       addStrikeToDeck(looser.deck.name);
+      //if (!matchHistory) { matchHistory = []; }
       matchHistory.push({winner: winner, looser: looser, kicked_out: looser.deck.strikes >= 2 });
       renderDecks();
       renderMatchHistory();
@@ -897,8 +915,8 @@ Niklas;TestWingman;Warlock;1`;
     slotB = { player: p2, deck: d2};
   }
 
-  readDecklistTemp();
-  renderDecks();
+  //readDecklistTemp();
+  //renderDecks();
 
   function render() {
     renderDecks();
