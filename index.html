@@ -500,6 +500,17 @@
   </div>
 
   <div class="rosters">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Deck-Stats</h2>
+      </div>
+      <div class="panel-body">
+        <table id="stats" style="border-spacing:0 2px; text-align: center;"></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="rosters">
     <div class="panel" id="matchHistoryPanel">
       <div class="panel-head">
         <h2>Match-History</h2>
@@ -864,6 +875,20 @@ Niklas;TestWingman;Warlock;1`;
     `;
   }
 
+  function renderStats() {
+    let stats = {Gino:{0:0, 1:0, 2:0}, Tim: {0:0, 1:0, 2:0}, Niklas: {0:0, 1:0, 2:0}};
+    decks.map(d => {
+      stats[d.owner][d.strikes] += 1;
+    });
+
+    document.getElementById("stats").innerHTML = `
+      <tr><th># of Strikes</th><th>Tim</th><th>Gino</th><th>Niklas</th></tr>
+      <tr><th>0</th><td>${stats.Tim[0]}</td><td>${stats.Gino[0]}</td><td>${stats.Niklas[0]}</td></tr>
+      <tr><th>1</th><td>${stats.Tim[1]}</td><td>${stats.Gino[1]}</td><td>${stats.Niklas[1]}</td></tr>
+      <tr><th>Out</th><td>${stats.Tim[2]}</td><td>${stats.Gino[2]}</td><td>${stats.Niklas[2]}</td></tr>
+    `
+  }
+
   function renderAutoSlot() {
     document.getElementById("auto-slot").innerHTML = `${auto_slot.name}:</br>Hasn't played for ${auto_slot.count} Game(s)!${auto_slot.count >= 3 ? "</br>Will be autoslotted next spin.": ""}`;
   }
@@ -951,6 +976,7 @@ Niklas;TestWingman;Warlock;1`;
     renderDecks();
     renderMatchHistory();
     renderAutoSlot();
+    renderStats();
   }
 </script>
 
